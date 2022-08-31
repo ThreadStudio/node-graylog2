@@ -31,5 +31,8 @@
   },
   "scripts": {
     "test": "node ./test"
+  },
+  "dependencies": {
+    "cycle": "^1.0.3"
   }
 }

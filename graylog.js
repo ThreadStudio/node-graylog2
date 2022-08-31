@@ -3,7 +3,8 @@ var zlib         = require('zlib'),
     dgram        = require('dgram'),
     util         = require('util'),
     EventEmitter = require('events').EventEmitter,
-    assert       = require('assert');
+    assert       = require('assert'),
+    cycle        = require("cycle");
 
 /**
  * Graylog instances emit errors. That means you really really should listen for them,
@@ -152,7 +153,7 @@ graylog.prototype._log = function log(short_message, full_message, additionalFie
 
         additionalFields = full_message || additionalFields;
     } else {
-        message.full_message = message.short_message = JSON.stringify(short_message);
+        message.full_message = message.short_message = JSON.stringify(cycle.decycle(short_message));
     }
 
     // We insert additional fields
@@ -167,7 +168,7 @@ graylog.prototype._log = function log(short_message, full_message, additionalFie
     }
 
     // Compression
-    payload = new Buffer(JSON.stringify(message));
+    payload = new Buffer.from(JSON.stringify(cycle.decycle(message)));
 
     function sendPayload(err, buffer) {
         if (err) {
@@ -201,7 +202,7 @@ graylog.prototype._log = function log(short_message, full_message, additionalFie
 
             // To be tested: what's faster, sending as we go or prebuffering?
             var server = that.getServer();
-            var chunk = new Buffer(bufferSize);
+            var chunk = new Buffer.from(bufferSize);
             var chunkSequenceNumber = 0;
 
             // Prepare the header
