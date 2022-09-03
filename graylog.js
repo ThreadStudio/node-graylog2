@@ -1,10 +1,10 @@
-var zlib         = require('zlib'),
-    crypto       = require('crypto'),
-    dgram        = require('dgram'),
-    util         = require('util'),
+var zlib = require('zlib'),
+    crypto = require('crypto'),
+    dgram = require('dgram'),
+    util = require('util'),
     EventEmitter = require('events').EventEmitter,
-    assert       = require('assert'),
-    cycle        = require("cycle");
+    assert = require('assert'),
+    cycle = require("cycle");
 
 /**
  * Graylog instances emit errors. That means you really really should listen for them,
@@ -14,25 +14,25 @@ var zlib         = require('zlib'),
 var graylog = function graylog(config) {
     EventEmitter.call(this);
 
-    this.config       = config;
+    this.config = config;
 
-    this.servers      = config.servers;
-    this.client       = null;
-    this.hostname     = config.hostname || require('os').hostname();
-    this.facility     = config.facility || 'Node.js';
-    this.deflate      = config.deflate || 'optimal';
+    this.servers = config.servers;
+    this.client = null;
+    this.hostname = config.hostname || require('os').hostname();
+    this.facility = config.facility || 'Node.js';
+    this.deflate = config.deflate || 'optimal';
     assert(
-      this.deflate === 'optimal' || this.deflate === 'always' || this.deflate === 'never',
-      'deflate must be one of "optimal", "always", or "never". was "' + this.deflate + '"');
+        this.deflate === 'optimal' || this.deflate === 'always' || this.deflate === 'never',
+        'deflate must be one of "optimal", "always", or "never". was "' + this.deflate + '"');
 
     this._unsentMessages = 0;
     this._unsentChunks = 0;
-    this._callCount   = 0;
+    this._callCount = 0;
 
     this._onClose = null;
     this._isDestroyed = false;
 
-    this._bufferSize  = config.bufferSize || this.DEFAULT_BUFFERSIZE;
+    this._bufferSize = config.bufferSize || this.DEFAULT_BUFFERSIZE;
 };
 
 util.inherits(graylog, EventEmitter);
@@ -117,31 +117,31 @@ graylog.prototype._log = function log(short_message, full_message, additionalFie
 
     var payload,
         fileinfo,
-        that    = this,
-        field   = '',
+        that = this,
+        field = '',
         message = {
-            version    : '1.1',
-            timestamp  : (timestamp || new Date()).getTime() / 1000,
-            host       : this.hostname,
-            facility   : this.facility,
-            level      : level
+            version: '1.1',
+            timestamp: (timestamp || new Date()).getTime() / 1000,
+            host: this.hostname,
+            facility: this.facility,
+            level: level
         };
 
-    if (typeof(short_message) !== 'object' && typeof(full_message) === 'object' && additionalFields === undefined) {
+    if (typeof (short_message) !== 'object' && typeof (full_message) === 'object' && additionalFields === undefined) {
         // Only short message and additional fields are available
-        message.short_message   = short_message;
-        message.full_message    = short_message;
+        message.short_message = short_message;
+        message.full_message = short_message;
 
         additionalFields = full_message;
-    } else  if (typeof(short_message) !== 'object') {
+    } else if (typeof (short_message) !== 'object') {
         // We normally set the data
-        message.short_message   = short_message;
-        message.full_message    = full_message || short_message;
+        message.short_message = short_message;
+        message.full_message = full_message || short_message;
     } else if (short_message.stack && short_message.message) {
 
         // Short message is an Error message, we process accordingly
         message.short_message = short_message.message;
-        message.full_message  = short_message.stack;
+        message.full_message = short_message.stack;
 
         // extract error file and line
         fileinfo = short_message.stack.split('\n')[0];
@@ -168,7 +168,7 @@ graylog.prototype._log = function log(short_message, full_message, additionalFie
     }
 
     // Compression
-    payload = new Buffer.from(JSON.stringify(cycle.decycle(message)));
+    payload = Buffer.from(JSON.stringify(cycle.decycle(message)));
 
     function sendPayload(err, buffer) {
         if (err) {
@@ -185,12 +185,12 @@ graylog.prototype._log = function log(short_message, full_message, additionalFie
         // It didn't fit, so prepare for a chunked stream
 
         var bufferSize = that._bufferSize;
-        var dataSize   = bufferSize - 12;  // the data part of the buffer is the buffer size - header size
+        var dataSize = bufferSize - 12;  // the data part of the buffer is the buffer size - header size
         var chunkCount = Math.ceil(buffer.length / dataSize);
 
         if (chunkCount > 128) {
             that._unsentMessages -= 1;
-            return that.emitError('Cannot log messages bigger than ' + (dataSize * 128) +  ' bytes');
+            return that.emitError('Cannot log messages bigger than ' + (dataSize * 128) + ' bytes');
         }
 
         // Generate a random id in buffer format
@@ -202,7 +202,7 @@ graylog.prototype._log = function log(short_message, full_message, additionalFie
 
             // To be tested: what's faster, sending as we go or prebuffering?
             var server = that.getServer();
-            var chunk = new Buffer.from(bufferSize);
+            var chunk = Buffer.alloc(bufferSize);
             var chunkSequenceNumber = 0;
 
             // Prepare the header
@@ -229,7 +229,7 @@ graylog.prototype._log = function log(short_message, full_message, additionalFie
 
                 // Copy data from full buffer into the chunk
                 var start = chunkSequenceNumber * dataSize;
-                var stop  = Math.min((chunkSequenceNumber + 1) * dataSize, buffer.length);
+                var stop = Math.min((chunkSequenceNumber + 1) * dataSize, buffer.length);
 
                 buffer.copy(chunk, 12, start, stop);
 
@@ -244,9 +244,9 @@ graylog.prototype._log = function log(short_message, full_message, additionalFie
     }
 
     if (this.deflate === 'never' || (this.deflate === 'optimal' && payload.length <= this._bufferSize)) {
-      sendPayload(null, payload);
+        sendPayload(null, payload);
     } else {
-      zlib.deflate(payload, sendPayload);
+        zlib.deflate(payload, sendPayload);
     }
 };
 
